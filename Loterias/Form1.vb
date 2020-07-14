@@ -1,58 +1,32 @@
-﻿Imports MetroFramework
+﻿Imports MetroFramework.Controls
 
 Public Class Form1
+
+#Region " Form "
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         Me.txtQdeDezenas.Focus()
+        Randomize()
+        Me.radMegaSena.Checked = True
+        If Now.Hour >= 18 Then Me.chkTemas.Checked = True
+    End Sub
+#End Region
+
+#Region " Controles "
+    Private Sub txtQdeApostas_TextChanged(sender As Object, e As EventArgs) Handles txtQdeApostas.TextChanged
+        Me.txtQdeApostas.Refresh()
     End Sub
 
-    Private Sub btnProcessar_Click(sender As Object, e As EventArgs) Handles btnProcessar.Click
-        'ReiniciaForm(e, e)
-
-
-        Dim qdeApostas As Integer = Val(Me.txtQdeApostas.Text)
-        Dim qdeDezenas As Integer = Val(Me.txtQdeDezenas.Text)
-        Dim qdeTotal As Integer = Val(Me.txtQdeTotal.Text)
-        Dim numero(qdeTotal) As Integer
-        Dim dezena As String = ""
-
-        Me.txtResultado.Text = ""
-
-        If qdeApostas > 10 Then
-            Me.txtQdeApostas.Text = "10"
-            qdeApostas = 10
-        End If
-
-        For i As Integer = 1 To qdeApostas
-            Dim jogos As String = ""
-
-            For j As Integer = 1 To qdeDezenas
-                While True
-                    dezena = "00" & GetRandom(i, qdeTotal).ToString
-                    dezena = dezena.Substring(dezena.Length - 2)
-
-                    If jogos.IndexOf(dezena) < 0 Then
-                        Exit While
-                    End If
-
-                    Application.DoEvents()
-                End While
-
-                If jogos.Length > 0 Then jogos &= " "
-                jogos &= "[ " & dezena & " ] "
-            Next
-
-            If Me.txtResultado.Text.Trim.Length > 0 Then Me.txtResultado.Text &= vbCrLf
-            Me.txtResultado.Text &= jogos
-        Next
+    Private Sub txtQdeDezenas_TextChanged(sender As Object, e As EventArgs) Handles txtQdeDezenas.TextChanged
+        Me.txtQdeDezenas.Refresh()
     End Sub
 
-    Public Function GetRandom(ByVal Min As Integer, ByVal Max As Integer) As Integer
-        ' fazendo o Gerador static, preservamos a mesma instância
-        ' assim não precisamos criar novas instância com a mesma semente 
-        ' entre as chamadas
-        Static Gerador As System.Random = New System.Random()
-        Return Gerador.Next(Min, Max)
-    End Function
+    Private Sub txtQdeTotal_TextChanged(sender As Object, e As EventArgs) Handles txtQdeTotal.TextChanged
+        Me.txtQdeTotal.Refresh()
+    End Sub
+
+    Private Sub txtResultado_TextChanged(sender As Object, e As EventArgs) Handles txtResultado.TextChanged
+        Me.txtResultado.Refresh()
+    End Sub
 
     Private Sub chkSelecionarJogo_CheckedChanged(sender As Object, e As EventArgs) Handles chkSelecionarJogo.CheckedChanged
         If Me.chkSelecionarJogo.Checked = True Then
@@ -68,8 +42,7 @@ Public Class Form1
         If Me.radMegaSena.Checked = True Then
             Me.txtQdeDezenas.Text = "6"
             Me.txtQdeTotal.Text = "60"
-            CorComponentes(MetroFramework.MetroColorStyle.Green)
-            Me.Refresh()
+            AlteraCores(Me, MetroFramework.MetroColorStyle.Green)
         Else
             Me.txtQdeDezenas.Text = ""
             Me.txtQdeTotal.Text = ""
@@ -80,8 +53,7 @@ Public Class Form1
         If Me.radLotoMania.Checked = True Then
             Me.txtQdeDezenas.Text = "50"
             Me.txtQdeTotal.Text = "100"
-            CorComponentes(MetroFramework.MetroColorStyle.Orange)
-            Me.Refresh()
+            AlteraCores(Me, MetroFramework.MetroColorStyle.Orange)
         Else
             Me.txtQdeDezenas.Text = ""
             Me.txtQdeTotal.Text = ""
@@ -92,8 +64,7 @@ Public Class Form1
         If Me.radLotofacil.Checked = True Then
             Me.txtQdeDezenas.Text = "15"
             Me.txtQdeTotal.Text = "25"
-            CorComponentes(MetroFramework.MetroColorStyle.Red)
-            Me.Refresh()
+            AlteraCores(Me, MetroFramework.MetroColorStyle.Pink)
         Else
             Me.txtQdeDezenas.Text = ""
             Me.txtQdeTotal.Text = ""
@@ -104,64 +75,178 @@ Public Class Form1
         If Me.radQuina.Checked = True Then
             Me.txtQdeDezenas.Text = "5"
             Me.txtQdeTotal.Text = "80"
-            CorComponentes(MetroFramework.MetroColorStyle.Blue)
-            Me.Refresh()
+            AlteraCores(Me, MetroFramework.MetroColorStyle.Purple)
         Else
             Me.txtQdeDezenas.Text = ""
             Me.txtQdeTotal.Text = ""
         End If
     End Sub
 
-    Private Sub ReiniciaForm(sender As System.Object, e As System.EventArgs)
-        'Me.Controls.Clear()
-        InitializeComponent()
-        Form1_Load(e, e)
+    Private Sub chkTemas_CheckedChanged(sender As Object, e As EventArgs) Handles chkTemas.CheckedChanged
+        If Me.chkTemas.Checked = False Then
+            Me.Theme = MetroFramework.MetroThemeStyle.Light
+        Else
+            Me.chkTemas.Text = "TEMA DARK"
+            Me.Theme = MetroFramework.MetroThemeStyle.Dark
+        End If
+
+        AlteraTema(Me)
+
+        Me.Refresh()
     End Sub
 
-    Private Sub CorComponentes(cor As MetroFramework.MetroColorStyle)
-        Dim estilo As New MetroFramework.Components.MetroStyleManager
+    Private Sub btnProcessar_Click(sender As Object, e As EventArgs) Handles btnProcessar.Click
+        With New Threading.Thread(Sub()
 
-        For Each obj As Object In Me.Controls
+                                      Me.Invoke(Sub()
+
+                                                    Sorteio()
+                                                End Sub)
+                                  End Sub)
+            .Start()
+        End With
+    End Sub
+#End Region
+
+#Region " Funções "
+    Private Sub Sorteio()
+        Dim qdeApostas As Integer = Val(Me.txtQdeApostas.Text)
+        Dim qdeDezenas As Integer = Val(Me.txtQdeDezenas.Text)
+        Dim qdeTotal As Integer = Val(Me.txtQdeTotal.Text)
+        'Dim apostas(qdeTotal) As String
+
+        Me.txtResultado.Text = ""
+
+        If qdeApostas > 10 Then
+            Me.txtQdeApostas.Text = "10"
+            qdeApostas = 10
+        End If
+
+        For i As Integer = 1 To qdeApostas
+            Dim aposta As String = ""
+
+            For j As Integer = 1 To qdeDezenas
+                While True
+                    'numlist.Add(GetRandom(i, qdeTotal))
+                    Dim dezena As String = "00" & GetRandom(i, qdeTotal + 1).ToString()
+                    'Dim dezena As String = "00" & Rnd() * qdeTotal
+
+                    dezena = dezena.Substring(dezena.Length - 2)
+
+                    If aposta.IndexOf(dezena) < 0 Then
+                        If aposta.Length > 0 Then aposta &= "-"
+
+                        aposta &= dezena
+                        Exit While
+                    End If
+
+                    Application.DoEvents()
+                End While
+            Next
+
+            Dim dezenas() As String = aposta.Split("-")
+            Dim valores As New List(Of Integer)
+
+            For k As Integer = 0 To dezenas.Count - 1
+                Dim s As String = dezenas(k)
+                If s = "00" Then s = "100"
+                valores.Add(Val(s))
+            Next
+
+            valores.Sort()
+            aposta = ""
+            Dim total As Integer = 0
+
+            For k As Integer = 0 To valores.Count - 1
+                Dim s As String = "00" & valores(k).ToString
+                s = s.Substring(s.Length - 2)
+                If aposta.Length > 0 Then aposta &= " "
+                aposta &= "[" & s & "] "
+                total = valores.Count
+            Next
+
+            'apostas(i) = aposta
+            If Me.txtResultado.Text.Trim.Length > 0 Then Me.txtResultado.Text &= vbCrLf & vbCrLf
+            Me.txtResultado.Text &= aposta
+            Me.lblqdeRegistros.Text = total.ToString
+        Next
+    End Sub
+
+    Public Function GetRandom(ByVal Min As Integer, ByVal Max As Integer) As Integer
+        ' fazendo o Gerador static, preservamos a mesma instância
+        ' assim não precisamos criar novas instância com a mesma semente 
+        ' entre as chamadas
+        Static Gerador As System.Random = New System.Random()
+        Return Gerador.Next(Min, Max)
+    End Function
+#End Region
+
+#Region " Tema & Cor "
+    Private Sub AlteraTema(sender As Object)
+        'Função recursiva
+        For Each obj As Object In sender.Controls
             Try
-                obj.Style = cor
-                Me.Style = cor
+                obj.Theme = Me.Theme
                 obj.Refresh()
             Catch ex As Exception
 
             End Try
+
+            If TipoObjeto(obj) Then
+                AlteraTema(obj)
+            End If
+        Next
+    End Sub
+
+    Private Sub AlteraCores(sender As Object, cor As MetroFramework.MetroColorStyle)
+        'Função recursiva
+        For Each obj As Object In sender.Controls
+            Try
+                obj.Style = cor
+                Me.Style = cor
+                Me.txtResultado.UseCustomBackColor = False
+                Me.txtResultado.UseStyleColors = Me.Style
+                obj.Refresh()
+            Catch ex As Exception
+
+            End Try
+
+            If TipoObjeto(obj) Then
+                AlteraCores(obj, cor)
+            End If
         Next
 
         Me.Refresh()
     End Sub
 
-    Private Sub chkTemas_CheckedChanged(sender As Object, e As EventArgs) Handles chkTemas.CheckedChanged
-        If Me.chkTemas.Checked = True Then
-            Me.chkTemas.Text = "TEMA LIGHT"
-            Me.Theme = MetroFramework.MetroThemeStyle.Light
+    Private Function TipoObjeto(ByRef controle As Object) As Boolean
+        Dim b As Boolean = False
 
-            For Each obj As Object In Me.Controls
-                Try
-                    obj.Theme = MetroThemeStyle.Light
-                    obj.Refresh()
-                Catch ex As Exception
+        If TypeOf controle Is MetroFramework.Controls.MetroButton Then b = True
+        If TypeOf controle Is MetroFramework.Controls.MetroCheckBox Then b = True
+        If TypeOf controle Is MetroFramework.Controls.MetroComboBox Then b = True
+        If TypeOf controle Is MetroFramework.Controls.MetroContextMenu Then b = True
+        If TypeOf controle Is MetroFramework.Controls.MetroDataGridHelper Then b = True
+        If TypeOf controle Is MetroFramework.Controls.MetroDateTime Then b = True
+        If TypeOf controle Is MetroFramework.Controls.MetroGrid Then b = True
+        If TypeOf controle Is MetroFramework.Controls.MetroLabel Then b = True
+        If TypeOf controle Is MetroFramework.Controls.MetroLink Then b = True
+        If TypeOf controle Is MetroFramework.Controls.MetroListView Then b = True
+        If TypeOf controle Is MetroFramework.Controls.MetroPanel Then b = True
+        If TypeOf controle Is MetroFramework.Controls.MetroProgressBar Then b = True
+        If TypeOf controle Is MetroFramework.Controls.MetroProgressSpinner Then b = True
+        If TypeOf controle Is MetroFramework.Controls.MetroRadioButton Then b = True
+        If TypeOf controle Is MetroFramework.Controls.MetroScrollBar Then b = True
+        If TypeOf controle Is MetroFramework.Controls.MetroTabControl Then b = True
+        If TypeOf controle Is MetroFramework.Controls.MetroTabPage Then b = True
+        If TypeOf controle Is MetroFramework.Controls.MetroTextBox Then b = True
+        If TypeOf controle Is MetroFramework.Controls.MetroTile Then b = True
+        If TypeOf controle Is MetroFramework.Controls.MetroToggle Then b = True
+        If TypeOf controle Is MetroFramework.Controls.MetroTrackBar Then b = True
+        If TypeOf controle Is MetroFramework.Controls.MetroUserControl Then b = True
 
-                End Try
-            Next
+        Return b
+    End Function
+#End Region
 
-        Else
-            Me.chkTemas.Text = "TEMA DARK"
-            Me.Theme = MetroFramework.MetroThemeStyle.Dark
-
-            For Each obj As Object In Me.Controls
-                Try
-                    obj.Theme = MetroThemeStyle.Dark
-                    obj.Refresh()
-                Catch ex As Exception
-
-                End Try
-            Next
-        End If
-
-        Me.Refresh()
-    End Sub
 End Class
